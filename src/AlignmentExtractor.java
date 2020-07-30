@@ -182,6 +182,8 @@ public class AlignmentExtractor {
             }
         }
         System.out.print(sc + "/" + senAlignDict.size() + "\n");
+        alignWriter.close();
+        probWriter.close();
         System.out.println("Done!");
     }
 }
