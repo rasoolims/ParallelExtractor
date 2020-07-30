@@ -109,6 +109,7 @@ public class AlignmentExtractor {
         }
         System.out.println("\nCalculating probabilities...");
         BufferedWriter probWriter = new BufferedWriter(new FileWriter(args[2]));
+        int di = 0;
         for (int srcWord : srcWordCounter.keySet()) {
             int srcCount = srcWordCounter.get(srcWord);
             for (int dstWord : src2dstProb.get(srcWord).keySet()) {
@@ -116,7 +117,12 @@ public class AlignmentExtractor {
                 src2dstProb.get(srcWord).put(dstWord, prob);
                 probWriter.write(words.get(srcWord) + "\t" + words.get(dstWord) + "\t" + prob + "\n");
             }
+            di++;
+            if (di % 100 == 0) {
+                System.out.print(di + "/" + srcWordCounter.size() + "\r");
+            }
         }
+        System.out.print(di + "/" + srcWordCounter.size() + "\n");
         System.out.println("Calculating sentence probabilities");
         BufferedWriter alignWriter = new BufferedWriter(new FileWriter(args[3]));
         int sc = 0;
@@ -175,6 +181,7 @@ public class AlignmentExtractor {
                 System.out.print(sc + "/" + senAlignDict.size() + "\r");
             }
         }
-        System.out.println("\nDone!");
+        System.out.print(sc + "/" + senAlignDict.size() + "\n");
+        System.out.println("Done!");
     }
 }
