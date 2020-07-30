@@ -15,11 +15,17 @@ class Pair<T1, T2> {
 public class AlignmentExtractor {
     public static void main(String[] args) throws IOException {
         HashMap<String, Integer> sen2IDDict = new HashMap<>();
+        HashMap<String, Integer> word2IDDict = new HashMap<>();
         ArrayList<String> sentences = new ArrayList<>();
-        HashMap<Integer, ArrayList<Pair<Integer, HashMap<Integer, Integer>>>> senAlignDict = new HashMap<>();
-        HashMap<String, Integer> srcWordCounter = new HashMap<>();
-        HashMap<String, HashMap<String, Double>> src2dstProb = new HashMap<>();
+        ArrayList<String> words = new ArrayList<>();
         String NULL = "_NULL_";
+        words.add(NULL);
+        int nullID = 0;
+        word2IDDict.put(NULL, nullID);
+
+        HashMap<Integer, ArrayList<Pair<Integer, HashMap<Integer, Integer>>>> senAlignDict = new HashMap<>();
+        HashMap<Integer, Integer> srcWordCounter = new HashMap<>();
+        HashMap<Integer, HashMap<Integer, Double>> src2dstProb = new HashMap<>();
         BufferedReader parReader = new BufferedReader(new FileReader(args[0]));
         BufferedReader alignReader = new BufferedReader(new FileReader(args[1]));
         String parLine = null;
@@ -58,27 +64,43 @@ public class AlignmentExtractor {
             senAlignDict.get(srcSenID).add(new Pair<>(dstSenID, alignDict));
 
             String[] srcWords = srcLine.split(" ");
-            String[] dstWords = dstLine.split(" ");
-
+            int[] srcIds = new int[srcWords.length];
             for (int si = 0; si < srcWords.length; si++) {
-                if (!srcWordCounter.containsKey(srcWords[si])) {
-                    srcWordCounter.put(srcWords[si], 1);
-                    src2dstProb.put(srcWords[si], new HashMap<>());
-                    src2dstProb.get(srcWords[si]).put(NULL, 0.0);
+                if (!word2IDDict.containsKey(srcWords[si])) {
+                    word2IDDict.put(srcWords[si], word2IDDict.size());
+                    words.add(srcWords[si]);
+                }
+                srcIds[si] = word2IDDict.get(srcWords[si]);
+            }
+            String[] dstWords = dstLine.split(" ");
+            int[] dstIds = new int[dstWords.length];
+            for (int ti = 0; ti < dstWords.length; ti++) {
+                if (!word2IDDict.containsKey(dstWords[ti])) {
+                    word2IDDict.put(dstWords[ti], word2IDDict.size());
+                    words.add(dstWords[ti]);
+                }
+                dstIds[ti] = word2IDDict.get(dstWords[ti]);
+            }
+
+            for (int si = 0; si < srcIds.length; si++) {
+                if (!srcWordCounter.containsKey(srcIds[si])) {
+                    srcWordCounter.put(srcIds[si], 1);
+                    src2dstProb.put(srcIds[si], new HashMap<>());
+                    src2dstProb.get(srcIds[si]).put(nullID, 0.0);
                 } else {
-                    srcWordCounter.put(srcWords[si], srcWordCounter.get(srcWords[si]) + 1);
+                    srcWordCounter.put(srcIds[si], srcWordCounter.get(srcIds[si]) + 1);
                 }
 
                 if (alignDict.containsKey(si)) {
                     int ti = alignDict.get(si);
 
-                    if (!src2dstProb.get(srcWords[si]).containsKey(dstWords[ti])) {
-                        src2dstProb.get(srcWords[si]).put(dstWords[ti], 1.);
+                    if (!src2dstProb.get(srcIds[si]).containsKey(dstWords[ti])) {
+                        src2dstProb.get(srcIds[si]).put(dstIds[ti], 1.);
                     } else {
-                        src2dstProb.get(srcWords[si]).put(dstWords[ti], src2dstProb.get(srcWords[si]).get(dstWords[ti]) + 1);
+                        src2dstProb.get(srcIds[si]).put(dstIds[ti], src2dstProb.get(srcIds[si]).get(dstIds[ti]) + 1);
                     }
                 } else {
-                    src2dstProb.get(srcWords[si]).put(NULL, src2dstProb.get(srcWords[si]).get(NULL) + 1);
+                    src2dstProb.get(srcIds[si]).put(nullID, src2dstProb.get(srcIds[si]).get(nullID) + 1);
                 }
             }
             if (lineNum % 1000 == 0) {
@@ -87,12 +109,12 @@ public class AlignmentExtractor {
         }
         System.out.println("\nCalculating probabilities...");
         BufferedWriter probWriter = new BufferedWriter(new FileWriter(args[2]));
-        for (String srcWord : srcWordCounter.keySet()) {
+        for (int srcWord : srcWordCounter.keySet()) {
             int srcCount = srcWordCounter.get(srcWord);
-            for (String dstWord : src2dstProb.get(srcWord).keySet()) {
+            for (int dstWord : src2dstProb.get(srcWord).keySet()) {
                 double prob = src2dstProb.get(srcWord).get(dstWord) / srcCount;
                 src2dstProb.get(srcWord).put(dstWord, prob);
-                probWriter.write(srcWord + "\t" + dstWord + "\t" + prob + "\n");
+                probWriter.write(words.get(srcWord) + "\t" + words.get(dstWord) + "\t" + prob + "\n");
             }
         }
         System.out.println("Calculating sentence probabilities");
@@ -102,6 +124,14 @@ public class AlignmentExtractor {
             double maxProb = -100000.0;
             String srcSentence = sentences.get(srcSenId);
             String[] srcWords = srcSentence.split(" ");
+            int[] srcIds = new int[srcWords.length];
+            for (int si = 0; si < srcWords.length; si++) {
+                if (!word2IDDict.containsKey(srcWords[si])) {
+                    word2IDDict.put(srcWords[si], word2IDDict.size());
+                    words.add(srcWords[si]);
+                }
+                srcIds[si] = word2IDDict.get(srcWords[si]);
+            }
 
             String bestSentence = "";
 
@@ -110,6 +140,14 @@ public class AlignmentExtractor {
                 HashMap<Integer, Integer> alignDict = pair.second;
                 String dstSentence = sentences.get(dstSenID);
                 String[] dstWords = dstSentence.split(" ");
+                int[] dstIds = new int[dstWords.length];
+                for (int ti = 0; ti < dstWords.length; ti++) {
+                    if (!word2IDDict.containsKey(dstWords[ti])) {
+                        word2IDDict.put(dstWords[ti], word2IDDict.size());
+                        words.add(dstWords[ti]);
+                    }
+                    dstIds[ti] = word2IDDict.get(dstWords[ti]);
+                }
 
                 double prob = 1.0;
 
@@ -119,7 +157,7 @@ public class AlignmentExtractor {
                     for (int si = 0; si < srcWords.length; si++) {
                         if (alignDict.containsKey(si)) {
                             int ti = alignDict.get(si);
-                            double tProb = src2dstProb.get(srcWords[si]).get(dstWords[ti]);
+                            double tProb = src2dstProb.get(srcIds[si]).get(dstIds[ti]);
                             prob *= tProb;
                         }
                     }
