@@ -161,7 +161,7 @@ public class AlignmentExtractor {
                             prob *= tProb;
                         }
                     }
-                    prob = Math.pow(prob, 1.0 / srcWords.length);
+                    prob = Math.pow(prob, 1.0 / alignDict.size()) / (1 + srcWords.length - alignDict.size());
                 }
                 if (prob > maxProb) {
                     maxProb = prob;
